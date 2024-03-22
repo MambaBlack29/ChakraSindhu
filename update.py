@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 '''
-This file contains all global variables' declarations
-Updates the required global variables
-Adds delay after being given some time
+This file contains all global variables' declarations 
+Updates the required global variables which are used to make logcial decisions
+ONLY this file takes input from the external outputs and stores processed results in variables 
+Doesn't have output functions
 '''
 
-import RPi.GPIO as GPIO
 import time
 import busio
 import adafruit_ads1x15.ads1115 as ADS
@@ -23,31 +21,21 @@ class update:
         i2c = busio.I2C(board.SCL, board.SDA)
         ads = ADS.ADS1115(i2c)
 
-        # communication channels
+        # communication channels to be used by other functions inside update ONLY
         self.wind_dir_ch = AnalogIn(ads, ADS.P0)
         self.wind_vel_ch = AnalogIn(ads, ADS.P1)
         self.nacelle_dir_ch = AnalogIn(ads, ADS.P2)
         self.machine_vel_ch = AnalogIn(ads, ADS.P3)
 
-        # defining pins (BCM mode)
-        self.switching_pin = 17
-        self.breaking_pin = 27
-        self.cw_contactor = 23
-        self.acw_contactor = 24
-
-        # initialize relevant variables
+        # initialize relevant variables which are used outside update
         self.counter = 0
-        self.start_time = time.time()
-        self.break_status = 1
-        self.machine_status = 0
+        self.mode = 0 # 0: normal, 1: extreme
         self.wind_dir_avg = []
         self.wind_vel_avg = []
         self.nacelle_dir = 0
         self.machine_vel = 0
-        self.wind_vel1 = 0 # average 1
-        self.wind_dir1 = 0 # average 1
-        self.wind_vel2 = 0 # average 2
-        self.wind_dir2 = 0 # average 2
+        self.wind_dir = [0,0] # 0: normal, 1: extreme
+        self.wind_vel = [0,0] # 0: normal, 1: extreme
         
         # only needed when this program starting for the first time
         # get the previous 600 bits of data and set first averages
@@ -63,30 +51,21 @@ class update:
                 elif len(reader_obj) >= 600:
                     for x in range(1,601):
                         self.wind_vel_avg.append(float(reader_obj[-x][1]))
-                        self.wind_dir_avg.append(float(reader_obj[-x][1]))
+                        self.wind_dir_avg.append(float(reader_obj[-x][2]))
                 
                 # if length > 0, update avgs
                 if len(self.wind_dir_avg) > 0:
-                    self.wind_vel1 = sum(self.wind_vel_avg)/len(self.wind_vel_avg)
-                    self.wind_dir1 = sum(self.wind_dir_avg)/len(self.wind_dir_avg)
-                    self.wind_vel2 = self.wind_vel1
-                    self.wind_dir2 = self.wind_dir1
+                    self.wind_vel[0] = sum(self.wind_vel_avg)/len(self.wind_vel_avg)
+                    self.wind_dir[0] = (sum(self.wind_dir_avg)/len(self.wind_dir_avg)) % 360
+                    self.wind_vel[1] = self.wind_vel[0]
+                    self.wind_dir[1] = self.wind_dir[0]
+                    
+                    # if 1 min avg exceeds value, keep alert
+                    if self.wind_vel[1] > 9:
+                        self.mode = 1
         except: # non-existant file
             pass
 
-        # GPIO modes for the raspi
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.switching_pin, GPIO.OUT)
-        GPIO.setup(self.breaking_pin, GPIO.OUT)
-        GPIO.setup(self.acw_contactor, GPIO.OUT)
-        GPIO.setup(self.cw_contactor, GPIO.OUT)
-        
-        # initialize outputs
-        self.update_values()
-        GPIO.output(self.switching_pin, GPIO.LOW) # machine OFF initially
-        GPIO.output(self.breaking_pin, GPIO.HIGH) # break ON initially
-        GPIO.output(self.acw_contactor, GPIO.LOW)
-        GPIO.output(self.cw_contactor, GPIO.LOW)
         self.update_values()
 
     # to add elements to list while updating avg
@@ -115,29 +94,35 @@ class update:
         # this approach avoids taking avg of 600 things, faster (by a tiny bit)
         # old avg > 0 since length > 0
         if length > 0 and length < 60:
-            self.wind_vel1 = (self.wind_vel1*length + c_vel)/(length+1)
-            self.wind_dir1 = (self.wind_dir1*length + c_dir)/(length+1)
-            self.wind_vel2 = (self.wind_vel2*length + c_vel)/(length+1)
-            self.wind_dir2 = (self.wind_dir2*length + c_dir)/(length+1)
+            self.wind_vel[0] = (self.wind_vel[0]*length + c_vel)/(length+1)
+            self.wind_dir[0] = ((self.wind_dir[0]*length + c_dir)/(length+1)) % 360
+            self.wind_vel[1] = (self.wind_vel[1]*length + c_vel)/(length+1)
+            self.wind_dir[1] = ((self.wind_dir[1]*length + c_dir)/(length+1)) % 360
             
         elif length >= 60 and length < 600:
-            self.wind_vel1 = (self.wind_vel1*length + c_vel)/(length+1)
-            self.wind_dir1 = (self.wind_dir1*length + c_dir)/(length+1)
-            self.wind_vel2 = (self.wind_vel2*60 - old_vel2 + c_vel)/60
-            self.wind_dir2 = (self.wind_dir2*60 - old_dir2 + c_dir)/60
+            self.wind_vel[0] = (self.wind_vel[0]*length + c_vel)/(length+1)
+            self.wind_dir[0] = ((self.wind_dir[0]*length + c_dir)/(length+1)) % 360
+            self.wind_vel[1] = (self.wind_vel[1]*60 - old_vel2 + c_vel)/60
+            self.wind_dir[1] = ((self.wind_dir[1]*60 - old_dir2 + c_dir)/60) % 360
             
         elif length >= 600:
-            self.wind_vel1 = (self.wind_vel1*600 - old_vel1 + c_vel)/600
-            self.wind_dir1 = (self.wind_dir1*600 - old_dir1 + c_dir)/600
-            self.wind_vel2 = (self.wind_vel2*60 - old_vel2 + c_vel)/60
-            self.wind_dir2 = (self.wind_dir2*60 - old_dir2 + c_dir)/60
+            self.wind_vel[0] = (self.wind_vel[0]*600 - old_vel1 + c_vel)/600
+            self.wind_dir[0] = ((self.wind_dir[0]*600 - old_dir1 + c_dir)/600) % 360
+            self.wind_vel[1] = (self.wind_vel[1]*60 - old_vel2 + c_vel)/60
+            self.wind_dir[1] = ((self.wind_dir[1]*60 - old_dir2 + c_dir)/60) % 360
             
         else:
             # only one element, which is set as current average too
-            self.wind_vel1 = c_vel
-            self.wind_dir1 = c_dir
-            self.wind_vel2 = c_vel
-            self.wind_dir2 = c_dir
+            self.wind_vel[0] = c_vel
+            self.wind_dir[0] = c_dir % 360
+            self.wind_vel[1] = c_vel
+            self.wind_dir[1] = c_dir % 360
+
+        # setting mode of operation
+        if self.wind_vel[1] > 9 or self.wind_vel[0] > 9: # cutout wind speed
+            self.mode = 1
+        else:
+            self.mode = 0
 
         self.counter += 1
             
@@ -151,23 +136,21 @@ class update:
         self.nacelle_dir = (self.nacelle_dir_ch.voltage/3.3*360) % 360
         self.machine_vel = self.machine_vel_ch.voltage/3.3*50 # fix the constants accordingly
         
-        # setting global averages according to mode set and updating lists
+        # setting global averages and mode according to mode set and updating lists 
         self.update_avg(cur_wind_vel, cur_wind_dir)
-        
-        # writing into csv file (to be modified accordingly)
+
+        # writing into csv file every minute(to be modified accordingly)
         if self.counter >= 60:
             self.counter = 0
             l = [time.time(),
                 cur_wind_vel,
                 cur_wind_dir,
                 self.machine_vel,
-                self.nacelle_dir,
-                self.break_status,      # set status manually in machine.py by using object properties
-                self.machine_status]    # set status manually in machine.py by using object properties
+                self.nacelle_dir]
             with open('wind_data.csv', 'a+') as f:
                 writer_obj = writer(f)
                 writer_obj.writerow(l)
                 f.close()
 
-        print("10 min average speed, dir:", self.wind_vel1, self.wind_dir1)
-        print("1 min average speed, dir:", self.wind_vel2, self.wind_dir2)
+        print("10 min average speed, dir:", self.wind_vel[0], self.wind_dir[0])
+        print("1 min average speed, dir:", self.wind_vel[1], self.wind_dir[1])

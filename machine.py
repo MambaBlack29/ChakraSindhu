@@ -1,67 +1,48 @@
-#!/usr/bin/env python3
+'''
+All functions will have a 'data' variable = update object passed through main.py
+Update object has all necessary functions/variables needed to find logic and output
+'''
 
-from update import *
+class machine:
+    def __init__(self, update_obj):
+        # processed input data from update.py and mode from main.py
+        self.data = update_obj
 
-base = update() # update class variable
+        # global variables used here and there
+        self.cut_in = 1.3
+        self.extreme_wind = 15
+        self.rpm_cut_out = 45
 
-class protocol_1_3:
-    # loop which runs throughout
-    def loop(self):
-        # at each loop instance, get updated values (with added condition for time interval)
-        base.update_values()
+        # global variables which are set after finding the logic
+        self.motor = 0
+        self.brake = 1
+        self.extreme = 0
+        self.stopped = 0
 
-        # cut in commands
-        if base.wind_speed < 1.3:
-            # turn OFF motor and turn ON breaks
-            GPIO.output(base.switching_pin, GPIO.LOW)
-            time.sleep(1) # time delay for safety
-            GPIO.output(base.breaking_pin, GPIO.HIGH)
-            print("Cut IN commands")
-            print("machine OFF \nbreaks ON")
-            base.break_status = 1
-            base.machine_status = 0
-            time.sleep(9) # in total 10 seconds delay
-
-        # normal working
-        elif base.wind_speed > 1.3 and base.wind_speed < 9:
-            # turn ON motor and turn OFF breaks
-            GPIO.output(base.switching_pin, GPIO.HIGH)
-            GPIO.output(base.breaking_pin, GPIO.LOW)
-            print("Normal wind speed")
-            print("machine ON \nbreaks OFF")
-            base.break_status = 0
-            base.machine_status = 1
-            time.sleep(10)
-
-        # cut out commands
-        else:
-            '''print("checking rpm for protocol 3")
-            # protocol 3 controls with ire data
-            if self.main_shaft_rpm > 45:
-                # turn OFF motor and turn ON breaks
-                GPIO.output(self.switching_pin, GPIO.LOW)
-                time.sleep(1) # time delay for safety
-                GPIO.output(self.breaking_pin, GPIO.HIGH)
-                print("working protocol 3")'''
-            # turn OFF motor and turn ON breaks
-            GPIO.output(base.switching_pin, GPIO.LOW)
-            time.sleep(1) # time delay for safety
-            GPIO.output(base.breaking_pin, GPIO.HIGH)
-            print("Cut OUT command")
-            print("Machine OFF \nbreaks ON")
-            base.break_status = 1
-            base.machine_status = 0
-            time.sleep(10)
-
-        print()
-
-if __name__ == '__main__':
-    protocol_testing_object = protocol_1_3() # runs the __init__ function = setup
-    print("initialising...")
-    print("machine OFF \nbreaks ON\n")
-    try:
-        while True:
-            protocol_testing_object.loop()
-    except KeyboardInterrupt:
-        GPIO.cleanup()
-
+    # based on direct wind speed and parsed mode data
+    def get_machine_brake(self):
+        # keep motor OFF and brake ON when slower than cut_in speed
+        if self.data.wind_vel[self.data.mode] < self.cut_in:
+            self.motor = 0
+            self.brake = 1
+            self.extreme = 0
+        # check whether motor speed is relevant or not
+        elif self.data.wind_vel[self.data.mode] >= self.cut_in:
+            if self.data.mode == 0: # less than cut_out speed
+                self.motor = 1
+                self.brake = 0
+                self.extreme = 0
+            else:
+                # overspeed and extreme control
+                if self.data.machine_vel >= self.rpm_cut_out:
+                    self.motor = 0
+                    self.brake = 1
+                    if self.data.wind_vel[self.data.mode] >= self.extreme_wind:
+                        self.extreme = 1
+                    else:
+                        self.extreme = 0
+                # not overspeed, but will keep observing
+                else:
+                    self.motor = 1
+                    self.brake = 0
+                    self.extreme = 0
