@@ -14,10 +14,12 @@ import yaw
 class main:
     # setup function, creates objects of all relevant files
     def __init__(self):
-        self.update_obj = update()
-        self.yaw_obj = yaw()
-        self.machine_obj = machine()
-        self.out_obj = out()
+        self.update_obj = update.update()
+        self.yaw_obj = yaw.yaw()
+        self.machine_obj = machine.machine()
+        self.out_obj = out.out()
+
+        self.update_obj.update_values()
     
     # loop function, runs infinitely later on
     async def loop(self):
@@ -32,8 +34,25 @@ class main:
         self.yaw_obj.get_error_direction()
 
         # now we have all the data, we can call output functions based on control values
-        if self.machine_obj.extreme == 0:
-            pass
+        # non extreme working conditions
+        if self.update_obj.mode == 0:
+            # avg direction of wind is more than tolerable
+            if self.yaw_obj.error > self.yaw_obj.yaw_tolerance_check:
+                # brake until motor off
+                while self.update_obj.machine_vel > 0:
+                    self.out_obj.brake_on()
+                    self.update_obj.update_values()
+                # yaw until error within tolerance
+                while self.yaw_obj.error > self.yaw_obj.yaw_tolerance_update:
+                    self.out_obj.yaw_out()
+                    self.update_obj.update_values()
+            
+            # in either case, after error correction, run machine normally
+            self.out_obj.machine_out()
+        
+        # extreme or abornal conditions
+        else:
+            if
 
         # waits for the remainder of 1 second till ending loop function
         await delay_coroutine

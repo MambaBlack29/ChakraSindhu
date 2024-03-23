@@ -27,15 +27,21 @@ class update:
         self.nacelle_dir_ch = AnalogIn(ads, ADS.P2)
         self.machine_vel_ch = AnalogIn(ads, ADS.P3)
 
+        # relevant constants used in update and outside
+        self.cut_in = 1.3
+        self.cut_out = 9
+        self.extreme_wind = 15
+        
         # initialize relevant variables which are used outside update
         self.counter = 0
-        self.mode = 0 # 0: normal, 1: extreme
+        self.extreme = 0 # 0: non extreme, 1: extreme
+        self.mode = 0 # 0: normal, 1: non normal
         self.wind_dir_avg = []
         self.wind_vel_avg = []
         self.nacelle_dir = 0
         self.machine_vel = 0
-        self.wind_dir = [0,0] # 0: normal, 1: extreme
-        self.wind_vel = [0,0] # 0: normal, 1: extreme
+        self.wind_dir = [0,0] # 0: normal, 1: non normal
+        self.wind_vel = [0,0] # 0: normal, 1: non normal
         
         # only needed when this program starting for the first time
         # get the previous 600 bits of data and set first averages
@@ -61,7 +67,7 @@ class update:
                     self.wind_dir[1] = self.wind_dir[0]
                     
                     # if 1 min avg exceeds value, keep alert
-                    if self.wind_vel[1] > 9:
+                    if self.wind_vel[1] > self.cut_out:
                         self.mode = 1
         except: # non-existant file
             pass
@@ -119,7 +125,7 @@ class update:
             self.wind_dir[1] = c_dir % 360
 
         # setting mode of operation
-        if self.wind_vel[1] > 9 or self.wind_vel[0] > 9: # cutout wind speed
+        if self.wind_vel[1] > self.cut_out or self.wind_vel[0] > self.cut_out: # cutout wind speed
             self.mode = 1
         else:
             self.mode = 0

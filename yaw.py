@@ -12,7 +12,8 @@ class yaw:
         # global variables used here and there
         self.shadow_A = 240
         self.shadow_B = 360
-        self.yaw_tolerance = 5
+        self.yaw_tolerance_check = 5
+        self.yaw_tolerance_update = 2
 
         # global variables which are set after using the finding the logic
         self.shadow_sense = 0 # 0: not in shadow, 1: between shadow_A and mid, 2: between mid and shadow_B
