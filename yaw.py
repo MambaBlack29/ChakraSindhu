@@ -4,8 +4,40 @@ Update object has all necessary functions/variables needed to find logic and out
 '''
 
 class yaw:
+    '''
+    Object to control the yaw of the Turbine based on wind direction and nacelle direction
+    Control the contactors(Turbine yaw) based on the yaw direction
+    Control the motor based on the yaw direction
+    
+    Parameters:
+    ----------
+    update_obj: object of update class
+        Contains all the data of wind speed and direction, nacelle direction and machine speed, and logic to update them
+    
+    Attributes:
+    ----------
+    data: object of update class
+        Contains all the data of wind speed and direction, nacelle direction and machine speed, and logic to update them
+    shadow_A: int
+        constant value for shadow sector start
+    shadow_B: int
+        constant value for shadow sector end
+    yaw_tolerance_check: int
+        constant value for tolerance in checking yaw error
+    yaw_tolerance_update: int
+        constant value for tolerance in updating yaw error
+    shadow_sense: int
+        0 or 1 or 2, 0 for not in shadow, 1 for between A and mid, 2 for between mid and B
+    direction: int
+        0 or 1, 0 for clockwise and 1 for anticlockwise
+    error: int
+        detected error in nacelle and wind directions
+    '''
     # setup function with relevant variable declarations
     def __init__(self, update_obj):
+        '''
+        
+        '''
         # processed input data from update.py and mode from main.py
         self.data = update_obj
 
@@ -20,8 +52,11 @@ class yaw:
         self.direction = 0 # 0: clockwise, 1: anticlockwise
         self.error = 0
     
-    # finds whether the wind vane is in the shadow sector or not
+
     def is_shadow(self):
+        '''
+        # finds whether the wind vane is in the shadow sector or not
+        '''
         # using the global shadow_sense variable since data changes to be made to that
         mid = 1.0*(self.shadow_B + self.shadow_A)/2
         # [A,mid)
@@ -33,8 +68,11 @@ class yaw:
         else:
             self.shadow_sense = 0
     
-    # finds the error and direction to go to based on where the vane is, used by main
+    
     def get_error_direction(self):
+        '''
+        finds the error and direction to go to based on where the vane is, used by main
+        '''
         # figures whether it is in shadow region or not
         self.is_shadow()
 

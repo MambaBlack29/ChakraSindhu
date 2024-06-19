@@ -15,8 +15,54 @@ from csv import reader
 
 # EVERYTHING inside a class, so the SAME can be used everywhere
 class update:
-    # setup function basically, since using OOPs
+    '''
+    This class contains all the functions and variables required to update the values of wind speed, wind direction, nacelle direction, and machine speed
+    It also contains the logic to update the global variables based on the input data
+    
+    Attributes:
+    ----------
+    #### Communication channels
+    wind_dir_ch: AnalogIn
+        channel for wind direction
+    wind_vel_ch: AnalogIn   
+        channel for wind speed
+    nacelle_dir_ch: AnalogIn
+        channel for nacelle direction
+    machine_vel_ch: AnalogIn
+        channel for machine speed
+    
+    #### Constants
+    cut_in: float - constant
+        cut in wind speed
+    cut_out: float - constant
+        cut out wind speed
+    extreme_wind: float - constant
+        extreme wind speed
+        
+    #### Data and Necessary Flags
+    counter: int
+        counter to keep track of the number of times the function is called
+    extreme: int
+        0 or 1, 0 for non extreme and 1 for extreme
+    mode: int
+        0 or 1, 0 for normal and 1 for non normal
+    wind_dir_avg: list[float]
+        list of wind direction values in degrees
+    wind_vel_avg: list[float]
+        list of wind speed values in m/s
+    nacelle_dir: float[float]
+        nacelle direction value in degrees
+    machine_vel: float
+        turbine rotation speed value in m/s
+    wind_dir: list[float]
+        list of wind direction values in degrees
+    wind_vel: list[float]
+        list of wind speed values in m/s
+    '''
     def __init__(self):
+        '''
+        Initialize the update object with the necessary communication channels and constants
+        '''
         # i2c stuff (not class variables)
         i2c = busio.I2C(board.SCL, board.SDA)
         ads = ADS.ADS1115(i2c)
@@ -76,6 +122,9 @@ class update:
 
     # to add elements to list while updating avg
     def update_avg(self, c_vel, c_dir):
+        '''
+        Function to update the average values of wind speed and wind direction
+        '''
         # length before appending
         length = len(self.wind_dir_avg)
         
@@ -134,6 +183,9 @@ class update:
             
     # updates all values, puts into csv
     def update_values(self):
+        '''
+        Function to update all the values of wind speed, wind direction, nacelle direction, and machine speed
+        '''
         # getting current data
         cur_wind_vel = self.wind_vel_ch.voltage/3.3*50
         cur_wind_dir = (self.wind_dir_ch.voltage/3.3*360) % 360
