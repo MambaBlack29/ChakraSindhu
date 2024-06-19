@@ -12,8 +12,19 @@ import machine
 import yaw
 
 class main:
-    # setup function, creates objects of all relevant files
+    '''
+    Attributes:
+    ----------
+    update_obj: object of update class
+    yaw_obj: object of yaw class
+    machine_obj: object of machine class
+    out_obj: object of out class
+    '''
     def __init__(self):
+        '''
+        Initialize all the objects and variables
+        '''
+        
         self.update_obj = update.update()
         self.yaw_obj = yaw.yaw()
         self.machine_obj = machine.machine()
@@ -23,6 +34,9 @@ class main:
     
     # loop function, runs infinitely later on
     async def loop(self):
+        '''
+        An async function which runs infinitely, updating all the values and making decisions
+        '''
         # create async delay object to get exactly 1 second delay
         delay_coroutine = asyncio.sleep(1)
 
@@ -52,7 +66,8 @@ class main:
         
         # extreme or abornal conditions
         else:
-            if
+            # if:
+            pass
 
         # waits for the remainder of 1 second till ending loop function
         await delay_coroutine
