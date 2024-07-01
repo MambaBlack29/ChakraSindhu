@@ -32,6 +32,25 @@ class main:
 
         self.update_obj.update_values()
     
+    # normal working commands
+    def normal(self):
+        # avg direction of wind is more than tolerable
+        if self.yaw_obj.error > self.yaw_obj.yaw_tolerance_check:
+            # brake until motor off
+            while self.update_obj.machine_vel > 0:
+                self.out_obj.brake_on()
+                self.update_obj.update_values()
+            # yaw until error within tolerance
+            while self.yaw_obj.error > self.yaw_obj.yaw_tolerance_update:
+                self.out_obj.yaw_out()
+                self.update_obj.update_values()
+        
+        # in either case, after error correction, run machine normally
+        self.out_obj.machine_out()
+
+    def extreme(self):
+        return
+    
     # loop function, runs infinitely later on
     async def loop(self):
         '''
@@ -50,24 +69,15 @@ class main:
         # now we have all the data, we can call output functions based on control values
         # non extreme working conditions
         if self.update_obj.mode == 0:
-            # avg direction of wind is more than tolerable
-            if self.yaw_obj.error > self.yaw_obj.yaw_tolerance_check:
-                # brake until motor off
-                while self.update_obj.machine_vel > 0:
-                    self.out_obj.brake_on()
-                    self.update_obj.update_values()
-                # yaw until error within tolerance
-                while self.yaw_obj.error > self.yaw_obj.yaw_tolerance_update:
-                    self.out_obj.yaw_out()
-                    self.update_obj.update_values()
-            
-            # in either case, after error correction, run machine normally
-            self.out_obj.machine_out()
+            self.normal()
         
         # extreme or abornal conditions
         else:
-            # if:
-            pass
+            # normally high windspeed, monitor the rpm
+            if self.machine_obj.extreme == 0:
+                self.normal()
+            else:
+                self.extreme()
 
         # waits for the remainder of 1 second till ending loop function
         await delay_coroutine

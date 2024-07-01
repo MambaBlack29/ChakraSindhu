@@ -129,9 +129,9 @@ class update:
         length = len(self.wind_dir_avg)
         
         # updating old values
-        old_vel1 = 0
+        old_vel1 = 0 # for 10 min avg
         old_dir1 = 0
-        old_vel2 = 0
+        old_vel2 = 0 # for 1 min avg
         old_dir2 = 0
         if length >= 600:
             # get old values after popping
@@ -148,7 +148,7 @@ class update:
         # new avg = (old avg * length - old + new)/length
         # this approach avoids taking avg of 600 things, faster (by a tiny bit)
         # old avg > 0 since length > 0
-        if length > 0 and length < 60:
+        if length >= 0 and length < 60:
             self.wind_vel[0] = (self.wind_vel[0]*length + c_vel)/(length+1)
             self.wind_dir[0] = ((self.wind_dir[0]*length + c_dir)/(length+1)) % 360
             self.wind_vel[1] = (self.wind_vel[1]*length + c_vel)/(length+1)
@@ -166,12 +166,6 @@ class update:
             self.wind_vel[1] = (self.wind_vel[1]*60 - old_vel2 + c_vel)/60
             self.wind_dir[1] = ((self.wind_dir[1]*60 - old_dir2 + c_dir)/60) % 360
             
-        else:
-            # only one element, which is set as current average too
-            self.wind_vel[0] = c_vel
-            self.wind_dir[0] = c_dir % 360
-            self.wind_vel[1] = c_vel
-            self.wind_dir[1] = c_dir % 360
 
         # setting mode of operation
         if self.wind_vel[1] > self.cut_out or self.wind_vel[0] > self.cut_out: # cutout wind speed
@@ -179,6 +173,7 @@ class update:
         else:
             self.mode = 0
 
+        # CHANGE THIS FROM UPDATE FILE
         self.counter += 1
             
     # updates all values, puts into csv
